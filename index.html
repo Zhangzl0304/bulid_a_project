@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>构建日志 | Build Log</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cream: '#FAFAF7',
+                        charcoal: '#1A1A1A',
+                        muted: '#6B6B6B',
+                        lime: '#00FF88',
+                        'lime-dark': '#00CC6A',
+                        border: '#E5E5E5'
+                    },
+                    fontFamily: {
+                        mono: ['JetBrains Mono', 'monospace'],
+                        sans: ['Noto Sans SC', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { font-family: 'Noto Sans SC', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #FAFAF7; }
+        ::-webkit-scrollbar-thumb { background: #E5E5E5; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00FF88; }
+        
+        ::selection { background: #00FF88; color: #1A1A1A; }
+        
+        .timeline-line {
+            background: linear-gradient(to bottom, transparent, #E5E5E5 5%, #E5E5E5 95%, transparent);
+        }
+        
+        .timeline-dot {
+            box-shadow: 0 0 0 4px #FAFAF7, 0 0 0 6px #00FF88;
+        }
+        
+        .metric-card:hover .metric-value {
+            color: #00FF88;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+        
+        .project-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+        }
+        
+        .project-card:hover .project-image {
+            transform: scale(1.02);
+        }
+        
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(0, 255, 136, 0); }
+        }
+        
+        .status-active {
+            animation: pulse-glow 2s infinite;
+        }
+        
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-in {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+        
+        .tag:hover {
+            background: #00FF88;
+            color: #1A1A1A;
+            border-color: #00FF88;
+        }
+    </style>
+</head>
+<body class="bg-cream text-charcoal antialiased">
+    <!-- 导航栏 -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-cream/90 backdrop-blur-md border-b border-border">
+        <div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+            <a href="#" class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-charcoal rounded-lg flex items-center justify-center">
+                    <span class="text-lime font-mono text-sm font-semibold">BL</span>
+                </div>
+                <span class="font-semibold text-lg">构建日志</span>
+            </a>
+            
+            <div class="hidden md:flex items-center gap-8">
+                <a href="#timeline" class="text-sm text-muted hover:text-charcoal transition-colors">时间轴</a>
+                <a href="#updates" class="text-sm text-muted hover:text-charcoal transition-colors">每周更新</a>
+                <a href="#metrics" class="text-sm text-muted hover:text-charcoal transition-colors">指标</a>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <a href="https://github.com" target="_blank" class="w-9 h-9 rounded-lg border border-border flex items-center justify-center hover:border-lime hover:text-lime transition-all">
+                    <span class="iconify w-5 h-5" data-icon="mdi:github"></span>
+                </a>
+                <button onclick="openSubscribe()" class="hidden sm:flex items-center gap-2 px-4 py-2 bg-charcoal text-white text-sm font-medium rounded-lg hover:bg-lime hover:text-charcoal transition-all">
+                    <span class="iconify w-4 h-4" data-icon="mdi:email-outline"></span>
+                    订阅
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero区域 -->
+    <section class="pt-32 pb-16 px-6">
+        <div class="max-w-5xl mx-auto">
+            <div class="max-w-2xl">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-charcoal/5 rounded-full text-xs font-medium mb-6">
+                    <span class="w-2 h-2 bg-lime rounded-full animate-pulse"></span>
+                    <span class="font-mono">正在构建中</span>
+                </div>
+                <h1 class="text-4xl md:text-5xl font-bold leading-tight mb-6">
+                    记录每一次<span class="text-lime">构建</span>，<br>分享每一份成长
+                </h1>
+                <p class="text-lg text-muted leading-relaxed mb-8">
+                    公开记录产品开发过程中的项目、实验和经验教训。<br>
+                    从想法到上线，每一步都值得被记住。
+                </p>
+                <div class="flex flex-wrap gap-3">
+                    <a href="#timeline" class="inline-flex items-center gap-2 px-6 py-3 bg-charcoal text-white font-medium rounded-lg hover:bg-lime hover:text-charcoal transition-all">
+                        浏览项目
+                        <span class="iconify w-4 h-4" data-icon="mdi:arrow-down"></span>
+                    </a>
+                    <a href="#updates" class="inline-flex items-center gap-2 px-6 py-3 border border-border font-medium rounded-lg hover:border-charcoal transition-all">
+                        查看更新
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 指标面板 -->
+    <section id="metrics" class="py-12 px-6 border-y border-border bg-white/50">
+        <div class="max-w-5xl mx-auto">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div class="metric-card text-center p-4 rounded-xl hover:bg-white transition-all cursor-default">
+                    <div class="metric-value text-3xl md:text-4xl font-bold font-mono mb-1 transition-all" data-target="12847">0</div>
+                    <div class="text-sm text-muted">访客</div>
+                </div>
+                <div class="metric-card text-center p-4 rounded-xl hover:bg-white transition-all cursor-default">
+                    <div class="metric-value text-3xl md:text-4xl font-bold font-mono mb-1 transition-all" data-target="892">0</div>
+                    <div class="text-sm text-muted">订阅者</div>
+                </div>
+                <div class="metric-card text-center p-4 rounded-xl hover:bg-white transition-all cursor-default">
+                    <div class="metric-value text-3xl md:text-4xl font-bold font-mono mb-1 transition-all" data-target="24">0</div>
+                    <div class="text-sm text-muted">已发布项目</div>
+                </div>
+                <div class="metric-card text-center p-4 rounded-xl hover:bg-white transition-all cursor-default">
+                    <div class="metric-value text-3xl md:text-4xl font-bold font-mono mb-1 transition-all" data-target="156">0</div>
+                    <div class="text-sm text-muted">更新日志</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 时间轴 -->
+    <section id="timeline" class="py-20 px-6">
+        <div class="max-w-5xl mx-auto">
+            <div class="flex items-center justify-between mb-12">
+                <div>
+                    <h2 class="text-2xl font-bold mb-2">项目时间轴</h2>
+                    <p class="text-muted">按时间顺序展示所有项目和重要节点</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button class="filter-btn active px-3 py-1.5 text-sm font-medium rounded-lg bg-charcoal text-white" data-filter="all">全部</button>
+                    <button class="filter-btn px-3 py-1.5 text-sm font-medium rounded-lg border border-border hover:border-charcoal transition-all" data-filter="project">项目</button>
+                    <button class="filter-btn px-3 py-1.5 text-sm font-medium rounded-lg border border-border hover:border-charcoal transition-all" data-filter="post">文章</button>
+                </div>
+            </div>
+            
+            <!-- 时间轴内容 -->
+            <div class="relative">
+                <!-- 时间线 -->
+                <div class="absolute left-4 md:left-1/2 top-0 bottom-0 w-px timeline-line md:-translate-x-px"></div>
+                
+                <!-- 时间轴项目 -->
+                <div id="timeline-container" class="space-y-12">
+                    <!-- 项目1 - 左侧 -->
+                    <div class="timeline-item relative flex flex-col md:flex-row md:items-center" data-type="project">
+                        <div class="md:w-1/2 md:pr-12 md:text-right pl-12 md:pl-0">
+                            <div class="project-card bg-white rounded-xl border border-border p-5 text-left cursor-pointer transition-all" onclick="openProject(0)">
+                                <div class="overflow-hidden rounded-lg mb-4">
+                                    <img src="https://picsum.photos/seed/taskflow/600/400" alt="TaskFlow" class="project-image w-full h-40 object-cover transition-transform duration-500">
+                                </div>
+                                <div class="flex items-center gap-2 mb-3">
+                                    <span class="px-2 py-0.5 bg-lime/20 text-lime-dark text-xs font-medium rounded-full flex items-center gap-1">
+                                        <span class="w-1.5 h-1.5 bg-lime rounded-full status-active"></span>
+                                        进行中
+                                    </span>
+                                    <span class="text-xs text-muted font-mono">v2.1.0</span>
+                                </div>
+                                <h3 class="font-semibold text-lg mb-2">TaskFlow Pro</h3>
+                                <p class="text-sm text-muted mb-4">一款注重效率的任务管理工具，支持拖拽排序、时间追踪和团队协作。</p>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <span class="tag px-2 py-0.5 text-xs border border-border rounded transition-all">React</span>
+                                    <span class="tag px-2 py-0.5 text-xs border border-border rounded transition-all">TypeScript</span>
+                                    <span class="tag px-2 py-0.5 text-xs border border-border rounded transition-all">Supabase</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="absolute left-4 md:left-1/2 w-3 h-3 bg-lime rounded-full timeline-dot -translate-x-1/2"></div>
+                        <div class="md:w-1/2 md:pl-12 pl-12 mt-3 md:mt-0">
+                            <span class="font-mono text-sm text-muted">2024年12月</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 文章1 - 右侧 -->
+                    <div class="timeline-item relative flex flex-col md:flex-row md:items-center" data-type="post">
+                        <div class="md:w-1/2 md:pr-12 md:text-right pl-12 md:pl-0 md:order-1 order-2">
+                            <span class="font-mono text-sm text-muted">2024年11月</span>
+                        </div>
+                        <div class="absolute left-4 md:left-1/2 w-3 h-3 bg-charcoal rounded-full timeline-dot -translate-x-1/2" style="box-shadow: 0 0 0 4px #FAFAF7, 0 0 0 6px #1A1A1A;"></div>
+                        <div class="md:w-1/2 md:pl-12 pl-12 md:order-2 order-1 mb-3 md:mb-0">
+                            <div class="project-card bg-white rounded-xl border border-border p-5 cursor-pointer transition-all">
+                                <span class="inline-block px-2 py-0.5 bg-charcoal/5 text-xs font-medium rounded mb-3">经验分享</span>
+                                <h3 class="font-semibold text-lg mb-2">从0到1：独立开发者的第一年收入复盘</h3>
+                                <p class="text-sm text-muted">分享我作为独立开发者第一年的收入、支出和最重要的经验教训...</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 项目2 - 左侧 -->
+                    <div class="timeline-item relative flex flex-col md:flex-row md:items-center" data-type="project">
+                        <div class="md:w-1/2 md:pr-12 md:text-right pl-12 md:pl-0">
+                            <div class="project-card bg-white rounded-xl border border-border p-5 text-left cursor-pointer transition-all" onclick="openProject(1)">
+                                <div class="overflow-hidden rounded-lg mb-4">
+                                    <img src="https://picsum.photos/seed/devtools/600/400" alt="DevTools" class="project-image w-full h-40 object-cover transition-transform duration-500">
+                                </div>
+                                <div class="flex items-center gap-2 mb-3">
+                                    <span class="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs font-medium rounded-full">已完成</span>
+                                    <span class="text-xs text-muted font-mono">v1.0.0</span>
+                                </div>
+                                <h3 class="font-semibold text-lg mb-2">DevTools Hub</h3>
+                                <p class="text-sm text-muted mb-4">开发者工具集合，包含JSON格式化、正则测试、编码转换等20+工具。</p>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <span class="tag px-2 py-0.5 text-xs border border-border rounded transition-all">Vue 3</span>
+                                    <span class="tag px-2 py-0.5 text-xs border border-border rounded transition-all">Vite</span>
+                                    <span class="tag px-2 py-0.5 text-xs border border-border rounded transition-all">PWA</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="absolute left-4 md:left-1/2 w-3 h-3 bg-lime rounded-full timeline-dot -translate-x-1/2"></div>
+                        <div class="md:w-1/2 md:pl-12 pl-12 mt-3 md:mt-0">
+                            <span class="font-mono text-sm text-muted">2024年9月</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 项目3 - 右侧 -->
+                    <div class="timeline-item relative flex flex-col md:flex-row md:items-center" data-type="project">
+                        <div class="md:w-1/2 md:pr-12 md:text-right pl-12 md:pl-0 md:order-1 order-2">
+                            <span class="font-mono text-sm text-muted">2024年7月</span>
+                        </div>
+                        <div class="absolute left-4 md:left-1/2 w-3 h-3 bg-lime rounded-full timeline-dot -translate-x-1/2"></div>
+                        <div class="md:w-1/2 md:pl-12 pl-12 md:order-2 order-1 mb-3 md:mb-0">
+                            <div class="project-card bg-white rounded-xl border border-border p-5 cursor-pointer transition-all" onclick="openProject(2)">
+                                <div class="overflow-hidden rounded-lg mb-4">
+                                    <img src="https://picsum.photos/seed/newsletter/600/400" alt="Newsletter" class="project-image w-full h-40 object-cover transition-transform duration-500">
+                                </div>
+                                <div class="flex items-center gap-2 mb-3">
+                                    <span class="px-2 py-0.5 bg-orange-50 text-orange-600 text-xs font-medium rounded-full">维护中</span>
+                                    <span class="text-xs text-muted font-mono">v1.2.3</span>
+                                </div>
+                                <h3 class="font-semibold text-lg mb-2">周刊订阅系统</h3>
+                                <p class="text-sm text-muted mb-4">开源的邮件订阅系统，支持Markdown编辑、定时发送和数据分析。</p>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <span class="tag px-2 py-0.5 text-xs border border-border rounded transition-all">Next.js</span>
+                                    <span class="tag px-2 py-0.5 text-xs border border-border rounded transition-all">Prisma</span>
+                                    <span class="tag px-2 py-0.5 text-xs border border-border rounded transition-all">Resend</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 文章2 - 左侧 -->
+                    <div class="timeline-item relative flex flex-col md:flex-row md:items-center" data-type="post">
+                        <div class="md:w-1/2 md:pr-12 md:text-right pl-12 md:pl-0">
+                            <div class="project-card bg-white rounded-xl border border-border p-5 text-left cursor-pointer transition-all">
+                                <span class="inline-block px-2 py-0.5 bg-charcoal/5 text-xs font-medium rounded mb-3">技术教程</span>
+                                <h3 class="font-semibold text-lg mb-2">使用Supabase构建无服务器应用</h3>
+                                <p class="text-sm text-muted">详解如何利用Supabase快速搭建后端服务，降低开发成本...</p>
+                            </div>
+                        </div>
+                        <div class="absolute left-4 md:left-1/2 w-3 h-3 bg-charcoal rounded-full timeline-dot -translate-x-1/2" style="box-shadow: 0 0 0 4px #FAFAF7, 0 0 0 6px #1A1A1A;"></div>
+                        <div class="md:w-1/2 md:pl-12 pl-12 mt-3 md:mt-0">
+                            <span class="font-mono text-sm text-muted">2024年5月</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 每周更新 -->
+    <section id="updates" class="py-20 px-6 bg-charcoal text-white">
+        <div class="max-w-5xl mx-auto">
+            <div class="flex items-center justify-between mb-12">
+                <div>
+                    <h2 class="text-2xl font-bold mb-2">每周更新</h2>
+                    <p class="text-white/60">记录每周的开发进度和思考</p>
+                </div>
+                <a href="#" class="text-lime text-sm font-medium hover:underline flex items-center gap-1">
+                    查看全部
+                    <span class="iconify w-4 h-4" data-icon="mdi:arrow-right"></span>
+                </a>
+            </div>
+            
+            <div class="space-y-4">
+                <!-- 更新条目 -->
+                <div class="update-item group p-6 bg-white/5 rounded-xl border border-white/10 hover:border-lime/30 transition-all cursor-pointer">
+                    <div class="flex flex-col md:flex-row md:items-center gap-4">
+                        <div class="flex-shrink-0">
+                            <span class="font-mono text-lime text-sm">W50</span>
+                            <span class="text-white/40 text-sm ml-2">2024.12.09 - 12.15</span>
+                        </div>
+                        <div class="flex-grow">
+                            <h3 class="font-semibold mb-2 group-hover:text-lime transition-colors">TaskFlow 2.1 重构完成，新增团队协作功能</h3>
+                            <ul class="text-sm text-white/60 space-y-1">
+                                <li class="flex items-center gap-2">
+                                    <span class="iconify w-4 h-4 text-lime" data-icon="mdi:check-circle"></span>
+                                    完成看板视图拖拽重构，性能提升40%
+                                </li>
+                                <li class="flex items-center gap-2">
+                                    <span class="iconify w-4 h-4 text-lime" data-icon="mdi:check-circle"></span>
+                                    新增实时协作编辑功能
+                                </li>
+                                <li class="flex items-center gap-2">
+                                    <span class="iconify w-4 h-4 text-yellow-400" data-icon="mdi:progress-clock"></span>
+                                    移动端适配进行中，预计下周完成
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <span class="iconify w-5 h-5 text-white/30 group-hover:text-lime group-hover:translate-x-1 transition-all" data-icon="mdi:chevron-right"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="update-item group p-6 bg-white/5 rounded-xl border border-white/10 hover:border-lime/30 transition-all cursor-pointer">
+                    <div class="flex flex-col md:flex-row md:items-center gap-4">
+                        <div class="flex-shrink-0">
+                            <span class="font-mono text-lime text-sm">W49</span>
+                            <span class="text-white/40 text-sm ml-2">2024.12.02 - 12.08</span>
+                        </div>
+                        <div class="flex-grow">
+                            <h3 class="font-semibold mb-2 group-hover:text-lime transition-colors">数据库迁移至Supabase，成本降低60%</h3>
+                            <ul class="text-sm text-white/60 space-y-1">
+                                <li class="flex items-center gap-2">
+                                    <span class="iconify w-4 h-4 text-lime" data-icon="mdi:check-circle"></span>
+                                    完成三个项目的数据库迁移
+                                </li>
+                                <li class="flex items-center gap-2">
+                                    <span class="iconify w-4 h-4 text-lime" data-icon="mdi:check-circle"></span>
+                                    编写迁移文档和最佳实践
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <span class="iconify w-5 h-5 text-white/30 group-hover:text-lime group-hover:translate-x-1 transition-all" data-icon="mdi:chevron-right"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="update-item group p-6 bg-white/5 rounded-xl border border-white/10 hover:border-lime/30 transition-all cursor-pointer">
+                    <div class="flex flex-col md:flex-row md:items-center gap-4">
+                        <div class="flex-shrink-0">
+                            <span class="font-mono text-lime text-sm">W48</span>
+                            <span class="text-white/40 text-sm ml-2">2024.11.25 - 12.01</span>
+                        </div>
+                        <div class="flex-grow">
+                            <h3 class="font-semibold mb-2 group-hover:text-lime transition-colors">博客系统重构，加载速度提升2倍</h3>
+                            <ul class="text-sm text-white/60 space-y-1">
+                                <li class="flex items-center gap-2">
+                                    <span class="iconify w-4 h-4 text-lime" data-icon="mdi:check-circle"></span>
+                                    从Next.js迁移到Astro
+                                </li>
+                                <li class="flex items-center gap-2">
+                                    <span class="iconify w-4 h-4 text-lime" data-icon="mdi:check-circle"></span>
+                                    实现增量静态生成
+                                </li>
+                                <li class="flex items-center gap-2">
+                                    <span class="iconify w-4 h-4 text-lime" data-icon="mdi:check-circle"></span>
+                                    Core Web Vitals全部达到绿色
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <span class="iconify w-5 h-5 text-white/30 group-hover:text-lime group-hover:translate-x-1 transition-all" data-icon="mdi:chevron-right"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 订阅CTA -->
+    <section class="py-20 px-6">
+        <div class="max-w-3xl mx-auto text-center">
+            <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-lime/10 rounded-full text-xs font-medium text-lime-dark mb-6">
+                <span class="iconify w-4 h-4" data-icon="mdi:email-heart-outline"></span>
+                每周精选直达邮箱
+            </div>
+            <h2 class="text-3xl font-bold mb-4">不错过任何更新</h2>
+            <p class="text-muted mb-8">订阅周刊，获取最新项目动态、技术文章和独立开发心得。</p>
+            
+            <form class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto mb-8">
+                <input type="email" placeholder="输入你的邮箱" class="flex-grow px-4 py-3 bg-white border border-border rounded-lg focus:outline-none focus:border-lime transition-all">
+                <button type="submit" class="flex-shrink-0 px-6 py-3 bg-charcoal text-white font-medium rounded-lg hover:bg-lime hover:text-charcoal transition-all">
+                    订阅周刊
+                </button>
+            </form>
+            
+            <div class="flex items-center justify-center gap-6 text-sm text-muted">
+                <span class="flex items-center gap-1.5">
+                    <span class="iconify w-4 h-4 text-lime" data-icon="mdi:check-circle"></span>
+                    每周一封
+                </span>
+                <span class="flex items-center gap-1.5">
+                    <span class="iconify w-4 h-4 text-lime" data-icon="mdi:check-circle"></span>
+                    无垃圾邮件
+                </span>
+                <span class="flex items-center gap-1.5">
+                    <span class="iconify w-4 h-4 text-lime" data-icon="mdi:check-circle"></span>
+                    随时退订
+                </span>
+            </div>
+        </div>
+    </section>
+
+    <!-- 页脚 -->
+    <footer class="py-12 px-6 border-t border-border">
+        <div class="max-w-5xl mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+                <div class="flex items-center gap-6">
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 bg-charcoal rounded flex items-center justify-center">
+                            <span class="text-lime font-mono text-xs font-semibold">BL</span>
+                        </div>
+                        <span class="font-medium">构建日志</span>
+                    </div>
+                    <span class="text-sm text-muted">© 2024 保留所有权利</span>
+                </div>
+                
+                <div class="flex items-center gap-6">
+                    <a href="#" class="text-sm text-muted hover:text-charcoal transition-colors">关于</a>
+                    <a href="#" class="text-sm text-muted hover:text-charcoal transition-colors">RSS</a>
+                    <a href="mailto:hello@buildlog.dev" class="text-sm text-muted hover:text-charcoal transition-colors">联系</a>
+                    <a href="https://github.com" target="_blank" class="text-muted hover:text-charcoal transition-colors">
+                        <span class="iconify w-5 h-5" data-icon="mdi:github"></span>
+                    </a>
+                </div>
+            </div>
+            
+            <div class="mt-6 pt-6 border-t border-border text-center">
+                <p class="text-xs text-muted">
+                    本站内容采用 <a href="#" class="underline hover:text-charcoal">CC BY-NC-SA 4.0</a> 许可协议 · 使用 Tailwind CSS 构建 · 托管于 Vercel
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 项目详情模态框 -->
+    <div id="project-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-charcoal/50 backdrop-blur-sm" onclick="closeProject()"></div>
+        <div class="absolute inset-4 md:inset-10 bg-cream rounded-2xl overflow-hidden flex flex-col">
+            <div class="flex items-center justify-between p-4 border-b border-border">
+                <span class="font-mono text-sm text-muted">项目详情</span>
+                <button onclick="closeProject()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-charcoal/5 transition-all">
+                    <span class="iconify w-5 h-5" data-icon="mdi:close"></span>
+                </button>
+            </div>
+            <div id="project-content" class="flex-grow overflow-y-auto p-6 md:p-10">
+                <!-- 动态内容 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 订阅模态框 -->
+    <div id="subscribe-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-charcoal/50 backdrop-blur-sm" onclick="closeSubscribe()"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-6 bg-cream rounded-2xl">
+            <div class="text-center mb-6">
+                <div class="w-12 h-12 bg-lime/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="iconify w-6 h-6 text-lime" data-icon="mdi:email-heart"></span>
+                </div>
+                <h3 class="text-xl font-bold mb-2">订阅构建日志</h3>
+                <p class="text-sm text-muted">每周精选内容，直接发送到你的邮箱</p>
+            </div>
+            <form class="space-y-3">
+                <input type="email" placeholder="your@email.com" class="w-full px-4 py-3 bg-white border border-border rounded-lg focus:outline-none focus:border-lime transition-all">
+                <button type="submit" class="w-full py-3 bg-charcoal text-white font-medium rounded-lg hover:bg-lime hover:text-charcoal transition-all">
+                    确认订阅
+                </button>
+            </form>
+            <button onclick="closeSubscribe()" class="w-full mt-4 text-sm text-muted hover:text-charcoal transition-colors">
+                暂不订阅
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // 项目数据
+        const projects = [
+            {
+                title: 'TaskFlow Pro',
+                version: 'v2.1.0',
+                status: '进行中',
+                statusColor: 'lime',
+                description: '一款注重效率的任务管理工具，支持拖拽排序、时间追踪和团队协作。',
+                longDescription: 'TaskFlow Pro 是我正在开发的旗舰产品，旨在帮助个人和团队更好地管理任务和时间。项目采用现代化的技术栈，专注于用户体验和性能优化。',
+                image: 'https://picsum.photos/seed/taskflow/1200/600',
+                screenshots: [
+                    'https://picsum.photos/seed/taskflow1/800/500',
+                    'https://picsum.photos/seed/taskflow2/800/500',
+                    'https://picsum.photos/seed/taskflow3/800/500'
+                ],
+                stack: ['React', 'TypeScript', 'Supabase', 'Tailwind CSS', 'Framer Motion'],
+                features: ['拖拽式任务管理', '实时协作', '时间追踪', '数据统计', '移动端适配'],
+                github: 'https://github.com',
+                demo: 'https://taskflow.dev',
+                date: '2024年12月'
+            },
+            {
+                title: 'DevTools Hub',
+                version: 'v1.0.0',
+                status: '已完成',
+                statusColor: 'blue',
+                description: '开发者工具集合，包含JSON格式化、正则测试、编码转换等20+工具。',
+                longDescription: 'DevTools Hub 是一个离线可用的开发者工具集合，所有工具都在浏览器本地运行，保护用户隐私。项目已稳定运行6个月，月活用户超过5000。',
+                image: 'https://picsum.photos/seed/devtools/1200/600',
+                screenshots: [
+                    'https://picsum.photos/seed/devtools1/800/500',
+                    'https://picsum.photos/seed/devtools2/800/500'
+                ],
+                stack: ['Vue 3', 'Vite', 'PWA', 'Monaco Editor'],
+                features: ['20+ 开发工具', '离线可用', '本地存储', '暗色模式'],
+                github: 'https://github.com',
+                demo: 'https://devtools.hub',
+                date: '2024年9月'
+            },
+            {
+                title: '周刊订阅系统',
+                version: 'v1.2.3',
+                status: '维护中',
+                statusColor: 'orange',
+                description: '开源的邮件订阅系统，支持Markdown编辑、定时发送和数据分析。',
+                longDescription: '这是一个开源的邮件订阅解决方案，专为独立开发者和小团队设计。系统支持Markdown编辑、邮件模板、定时发送、打开率追踪等功能。',
+                image: 'https://picsum.photos/seed/newsletter/1200/600',
+                screenshots: [
+                    'https://picsum.photos/seed/newsletter1/800/500',
+                    'https://picsum.photos/seed/newsletter2/800/500'
+                ],
+                stack: ['Next.js', 'Prisma', 'PostgreSQL', 'Resend', 'Tailwind CSS'],
+                features: ['Markdown编辑器', '邮件模板', '定时发送', '数据分析', '订阅管理'],
+                github: 'https://github.com',
+                demo: 'https://newsletter.sys',
+                date: '2024年7月'
+            }
+        ];
+
+        // 打开项目详情
+        function openProject(index) {
+            const project = projects[index];
+            const modal = document.getElementById('project-modal');
+            const content = document.getElementById('project-content');
+            
+            const statusColors = {
+                lime: 'bg-lime/20 text-lime-dark',
+                blue: 'bg-blue-50 text-blue-600',
+                orange: 'bg-orange-50 text-orange-600'
+            };
+            
+            content.innerHTML = `
+                <div class="max-w-4xl mx-auto">
+                    <div class="mb-8">
+                        <img src="${project.image}" alt="${project.title}" class="w-full h-64 md:h-80 object-cover rounded-xl mb-6">
+                        <div class="flex flex-wrap items-center gap-3 mb-4">
+                            <span class="px-3 py-1 ${statusColors[project.statusColor]} text-sm font-medium rounded-full flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 bg-current rounded-full ${project.statusColor === 'lime' ? 'status-active' : ''}"></span>
+                                ${project.status}
+                            </span>
+                            <span class="font-mono text-sm text-muted">${project.version}</span>
+                            <span class="text-sm text-muted">·</span>
+                            <span class="text-sm text-muted">${project.date}</span>
+                        </div>
+                        <h2 class="text-3xl font-bold mb-4">${project.title}</h2>
+                        <p class="text-lg text-muted">${project.longDescription}</p>
+                    </div>
+                    
+                    <div class="mb-8">
+                        <h3 class="font-semibold mb-3">技术栈</h3>
+                        <div class="flex flex-wrap gap-2">
+                            ${project.stack.map(s => `<span class="px-3 py-1.5 bg-charcoal/5 text-sm rounded-lg">${s}</span>`).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-8">
+                        <h3 class="font-semibold mb-3">核心功能</h3>
+                        <ul class="grid md:grid-cols-2 gap-2">
+                            ${project.features.map(f => `
+                                <li class="flex items-center gap-2 text-muted">
+                                    <span class="iconify w-4 h-4 text-lime" data-icon="mdi:check-circle"></span>
+                                    ${f}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-8">
+                        <h3 class="font-semibold mb-3">截图</h3>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            ${project.screenshots.map(s => `
+                                <img src="${s}" alt="Screenshot" class="w-full h-48 object-cover rounded-lg border border-border">
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-wrap gap-3">
+                        <a href="${project.demo}" target="_blank" class="inline-flex items-center gap-2 px-6 py-3 bg-charcoal text-white font-medium rounded-lg hover:bg-lime hover:text-charcoal transition-all">
+                            <span class="iconify w-4 h-4" data-icon="mdi:open-in-new"></span>
+                            查看演示
+                        </a>
+                        <a href="${project.github}" target="_blank" class="inline-flex items-center gap-2 px-6 py-3 border border-border font-medium rounded-lg hover:border-charcoal transition-all">
+                            <span class="iconify w-4 h-4" data-icon="mdi:github"></span>
+                            GitHub
+                        </a>
+                    </div>
+                </div>
+            `;
+            
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // 关闭项目详情
+        function closeProject() {
+            document.getElementById('project-modal').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        // 打开订阅模态框
+        function openSubscribe() {
+            document.getElementById('subscribe-modal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // 关闭订阅模态框
+        function closeSubscribe() {
+            document.getElementById('subscribe-modal').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        // 数字动画
+        function animateValue(element, start, end, duration) {
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                const value = Math.floor(progress * (end - start) + start);
+                element.textContent = value.toLocaleString();
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        // 指标动画 - Intersection Observer
+        const metricsObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const metrics = entry.target.querySelectorAll('.metric-value');
+                    metrics.forEach(metric => {
+                        const target = parseInt(metric.dataset.target);
+                        animateValue(metric, 0, target, 2000);
+                    });
+                    metricsObserver.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.5 });
+
+        metricsObserver.observe(document.getElementById('metrics'));
+
+        // 时间轴筛选
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const filter = this.dataset.filter;
+                
+                // 更新按钮状态
+                document.querySelectorAll('.filter-btn').forEach(b => {
+                    b.classList.remove('active', 'bg-charcoal', 'text-white');
+                    b.classList.add('border', 'border-border');
+                });
+                this.classList.add('active', 'bg-charcoal', 'text-white');
+                this.classList.remove('border', 'border-border');
+                
+                // 筛选项目
+                document.querySelectorAll('.timeline-item').forEach(item => {
+                    if (filter === 'all' || item.dataset.type === filter) {
+                        item.style.display = '';
+                        item.style.opacity = '1';
+                    } else {
+                        item.style.opacity = '0';
+                        setTimeout(() => {
+                            item.style.display = filter === 'all' ? '' : 'none';
+                        }, 300);
+                    }
+                });
+            });
+        });
+
+        // ESC 关闭模态框
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeProject();
+                closeSubscribe();
+            }
+        });
+
+        // 平滑滚动
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
